@@ -7,7 +7,7 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #1a1a2e;
+      background: #0a0a14;
       overflow: hidden;
       touch-action: none;
       font-family: system-ui, -apple-system, sans-serif;
@@ -22,89 +22,212 @@
     #bg {
       position: absolute;
       inset: 0;
-      background: linear-gradient(180deg, #16213e 0%, #1a1a2e 60%, #2d2d44 100%);
+      background: radial-gradient(ellipse at 50% 30%, #1a1a3a 0%, #0a0a14 60%, #12121f 100%);
     }
     .floor {
       position: absolute;
-      bottom: 80px;
+      bottom: 70px;
       left: 0; right: 0;
-      height: 4px;
-      background: #4a4a6a;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #4a4a6a, transparent);
     }
     .floor::after {
       content: '';
       position: absolute;
       bottom: 0; left: 0; right: 0;
-      height: 80px;
-      background: linear-gradient(180deg, #2d2d44 0%, #1a1a2e 100%);
+      height: 70px;
+      background: linear-gradient(180deg, #1a1a2e 0%, #0a0a14 100%);
     }
 
     /* 角色 */
     .fighter {
       position: absolute;
-      bottom: 84px;
+      bottom: 74px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      transition: left 0.05s;
+      transition: left 0.06s, bottom 0.15s;
     }
     .sprite {
-      font-size: 64px;
-      line-height: 1;
-      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+      width: 90px;
+      height: 90px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.6));
     }
+    .sprite.mirror { transform: scaleX(-1); }
     .hp-bar {
       width: 80px;
-      height: 10px;
-      background: #333;
-      border-radius: 5px;
+      height: 8px;
+      background: #222;
+      border-radius: 4px;
       margin-bottom: 4px;
       overflow: hidden;
+      border: 1px solid #333;
     }
     .hp-fill {
       height: 100%;
-      background: linear-gradient(90deg, #ff4757, #ff6b81);
-      transition: width 0.2s;
-      border-radius: 5px;
+      transition: width 0.15s;
+      border-radius: 4px;
+    }
+    .hp-fill.player {
+      background: linear-gradient(90deg, #22c55e, #4ade80);
     }
     .hp-fill.enemy {
-      background: linear-gradient(90deg, #ff4757, #ff6b81);
+      background: linear-gradient(90deg, #ef4444, #f87171);
     }
     .hp-fill.boss {
-      background: linear-gradient(90deg, #a855f7, #ec4899);
-      width: 100%;
+      background: linear-gradient(90deg, #a855f7, #c084fc);
     }
     .name {
-      font-size: 12px;
-      color: #fff;
+      font-size: 11px;
+      color: #ccc;
       text-align: center;
       margin-bottom: 2px;
-      text-shadow: 1px 1px 2px #000;
+      text-shadow: 1px 2px 3px #000;
     }
+    .name.boss { color: #f87171; font-weight: 700; }
+
+    /* 受伤闪烁 */
+    .fighter.hurt {
+      animation: hurtShake 0.2s;
+      filter: brightness(2) saturate(0.5);
+    }
+    @keyframes hurtShake {
+      0%,100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      75% { transform: translateX(8px); }
+    }
+
+    /* 攻击前摇 */
+    .fighter.attack-windup .sprite {
+      animation: windup 0.15s ease-out forwards;
+    }
+    @keyframes windup {
+      to { transform: scale(1.2) translateX(10px); }
+    }
+    .fighter.attack-windup.mirror .sprite {
+      animation: windupMirror 0.15s ease-out forwards;
+    }
+    @keyframes windupMirror {
+      to { transform: scale(1.2) translateX(-10px) scaleX(-1); }
+    }
+
+    .fighter.attacking .sprite {
+      animation: attackSwing 0.2s ease-out forwards;
+    }
+    .fighter.attacking.mirror .sprite {
+      animation: attackSwingMirror 0.2s ease-out forwards;
+    }
+    @keyframes attackSwing {
+      to { transform: scale(1.3) translateX(25px); }
+    }
+    @keyframes attackSwingMirror {
+      to { transform: scale(1.3) translateX(-25px) scaleX(-1); }
+    }
+
+    /* 击飞效果 */
+    .fighter.launched {
+      animation: launched 0.4s ease-out forwards;
+    }
+    @keyframes launched {
+      0% { transform: translateY(0) rotate(0deg); }
+      30% { transform: translateY(-40px) rotate(15deg); }
+      100% { transform: translateY(0) rotate(0deg); }
+    }
+
+    /* 特效 */
     .hit-effect {
       position: absolute;
-      font-size: 32px;
-      font-weight: bold;
-      color: #ffd93d;
+      font-size: 36px;
       pointer-events: none;
-      animation: hitPop 0.5s forwards;
+      animation: hitPop 0.4s forwards;
+      z-index: 50;
     }
     @keyframes hitPop {
-      0% { transform: scale(0.5) translateY(0); opacity: 1; }
-      50% { transform: scale(1.2) translateY(-20px); opacity: 1; }
-      100% { transform: scale(1) translateY(-40px); opacity: 0; }
+      0% { transform: scale(0.3) translateY(0) rotate(0deg); opacity: 1; }
+      50% { transform: scale(1.4) translateY(-30px) rotate(10deg); opacity: 1; }
+      100% { transform: scale(1) translateY(-50px) rotate(0deg); opacity: 0; }
     }
     .damage-num {
       position: absolute;
-      font-size: 28px;
-      font-weight: 700;
-      color: #ff4757;
+      font-size: 26px;
+      font-weight: 900;
+      color: #ffd93d;
       pointer-events: none;
-      animation: damageFly 0.6s forwards;
+      animation: damageFly 0.7s forwards;
+      z-index: 50;
+      text-shadow: 2px 2px 0 #000, -1px -1px 0 #000;
     }
+    .damage-num.big { font-size: 36px; color: #ff4757; }
     @keyframes damageFly {
-      0% { transform: translateY(0); opacity: 1; }
-      100% { transform: translateY(-60px) scale(0.6); opacity: 0; }
+      0% { transform: translateY(0) scale(0.5); opacity: 1; }
+      30% { transform: translateY(-30px) scale(1.2); opacity: 1; }
+      100% { transform: translateY(-80px) scale(0.7); opacity: 0; }
+    }
+    .star-effect {
+      position: absolute;
+      font-size: 20px;
+      pointer-events: none;
+      animation: starSpin 0.5s forwards;
+      z-index: 49;
+    }
+    @keyframes starSpin {
+      0% { transform: scale(0) rotate(0deg); opacity: 1; }
+      50% { transform: scale(1.5) rotate(180deg); opacity: 1; }
+      100% { transform: scale(0) rotate(360deg); opacity: 0; }
+    }
+
+    /* 屏幕效果 */
+    .flash {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,71,87,0.25);
+      pointer-events: none;
+      z-index: 150;
+      animation: flashAnim 0.12s forwards;
+    }
+    @keyframes flashAnim {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    .ko-text {
+      position: fixed;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 90px;
+      font-weight: 900;
+      color: #ff2d2d;
+      text-shadow: 0 0 40px rgba(255,45,45,0.9), 5px 5px 0 #7f0000, -2px -2px 0 #ff6b6b;
+      z-index: 200;
+      animation: koPop 1.2s forwards;
+      letter-spacing: 10px;
+    }
+    @keyframes koPop {
+      0% { transform: translate(-50%, -50%) scale(0) rotate(-15deg); opacity: 0; }
+      20% { transform: translate(-50%, -50%) scale(1.4) rotate(5deg); opacity: 1; }
+      40% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+      70% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(0.5) rotate(5deg); opacity: 0; }
+    }
+    .wave-banner {
+      position: fixed;
+      top: 38%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 42px;
+      font-weight: 900;
+      color: #ffd93d;
+      text-shadow: 3px 3px 0 #000, 0 0 20px rgba(255,217,61,0.5);
+      z-index: 200;
+      animation: waveIn 2s forwards;
+      letter-spacing: 6px;
+    }
+    @keyframes waveIn {
+      0% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+      15% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      75% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
     }
 
     /* 控制按钮 */
@@ -115,45 +238,50 @@
       right: 0;
       display: flex;
       justify-content: space-between;
-      padding: 16px;
-      background: linear-gradient(180deg, transparent, rgba(0,0,0,0.6));
+      align-items: flex-end;
+      padding: 14px 20px;
+      background: linear-gradient(180deg, transparent, rgba(0,0,0,0.7));
       z-index: 100;
     }
-    .ctrl-group {
-      display: flex;
-      gap: 8px;
-    }
+    .ctrl-group { display: flex; gap: 8px; align-items: center; }
+    .move-btns { display: flex; gap: 8px; align-items: center; }
     .ctrl-btn {
-      width: 64px;
-      height: 64px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
-      border: 3px solid rgba(255,255,255,0.3);
-      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.08);
       color: #fff;
-      font-size: 28px;
+      font-size: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(6px);
+      transition: transform 0.08s, background 0.08s;
     }
     .ctrl-btn:active {
-      background: rgba(255,255,255,0.3);
-      transform: scale(0.9);
+      transform: scale(0.85);
+      background: rgba(255,255,255,0.25);
     }
     .ctrl-btn.attack {
-      background: rgba(255,71,87,0.3);
-      border-color: #ff4757;
+      background: rgba(239,68,68,0.25);
+      border-color: #ef4444;
+      width: 68px; height: 68px;
+      font-size: 30px;
     }
+    .ctrl-btn.attack:active { background: rgba(239,68,68,0.5); }
     .ctrl-btn.special {
-      background: rgba(168,85,247,0.3);
+      background: rgba(168,85,247,0.25);
       border-color: #a855f7;
+      width: 68px; height: 68px;
+      font-size: 30px;
     }
-    .move-btns {
-      display: flex;
-      gap: 8px;
-      align-items: center;
+    .ctrl-btn.special:active { background: rgba(168,85,247,0.5); }
+    .ctrl-btn.jump-btn {
+      width: 50px; height: 50px;
+      font-size: 20px;
     }
 
     /* 状态栏 */
@@ -164,25 +292,46 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      color: #fff;
       z-index: 100;
       pointer-events: none;
     }
     #wave-info {
-      font-size: 16px;
+      font-size: 15px;
+      font-weight: 700;
       color: #ffd93d;
-      font-weight: 600;
+      text-shadow: 1px 1px 3px #000;
+      background: rgba(0,0,0,0.4);
+      padding: 4px 12px;
+      border-radius: 20px;
     }
     #combo {
-      font-size: 20px;
-      font-weight: 700;
+      font-size: 22px;
+      font-weight: 900;
       color: #ff4757;
       opacity: 0;
-      transition: opacity 0.2s;
+      transition: opacity 0.15s, transform 0.15s;
+      text-shadow: 2px 2px 0 #000;
+      transform: scale(0.8);
     }
-    #combo.show { opacity: 1; }
+    #combo.show {
+      opacity: 1;
+      transform: scale(1);
+      animation: comboPulse 0.3s ease-out;
+    }
+    @keyframes comboPulse {
+      0% { transform: scale(1.4); }
+      100% { transform: scale(1); }
+    }
+    #score-display {
+      font-size: 15px;
+      color: #aaa;
+      text-shadow: 1px 1px 3px #000;
+      background: rgba(0,0,0,0.4);
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
 
-    /* 开始/结束界面 */
+    /* 界面 */
     .screen {
       position: fixed;
       inset: 0;
@@ -190,89 +339,46 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: rgba(26,26,46,0.97);
-      z-index: 200;
+      background: rgba(10,10,20,0.97);
+      z-index: 300;
       color: #fff;
-      gap: 16px;
+      gap: 14px;
     }
     .screen.hidden { display: none; }
     h1 {
-      font-size: 48px;
-      letter-spacing: 6px;
-      background: linear-gradient(135deg, #ff4757, #ffd93d);
+      font-size: 52px;
+      letter-spacing: 8px;
+      background: linear-gradient(135deg, #ff4757, #ffd93d, #ff8e53);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
     }
-    .final-score {
-      font-size: 64px;
-      font-weight: 700;
-      color: #ffd93d;
-    }
+    .final-score { font-size: 72px; font-weight: 800; color: #ffd93d; text-shadow: 0 0 30px rgba(255,217,61,0.5); }
     .btn {
-      padding: 16px 48px;
-      font-size: 20px;
-      font-weight: 700;
+      padding: 16px 52px;
+      font-size: 22px;
+      font-weight: 800;
       border: none;
-      border-radius: 16px;
+      border-radius: 18px;
       cursor: pointer;
       background: linear-gradient(135deg, #ff4757, #ff8e53);
       color: #fff;
-      margin-top: 8px;
+      box-shadow: 0 6px 24px rgba(255,71,87,0.4);
+      transition: transform 0.1s, box-shadow 0.1s;
     }
-    .btn:active { transform: scale(0.95); }
-    .desc { color: #888; font-size: 14px; text-align: center; max-width: 280px; }
-    .result-text { font-size: 24px; color: #aaa; }
+    .btn:active { transform: scale(0.93); }
+    .desc { color: #777; font-size: 15px; text-align: center; max-width: 300px; line-height: 1.7; }
+    .result-text { font-size: 22px; color: #aaa; }
+    .win-text { color: #4ade80; }
+    .lose-text { color: #ef4444; }
 
-    /* 特效 */
-    .flash {
-      position: fixed;
-      inset: 0;
-      background: rgba(255,71,87,0.2);
-      pointer-events: none;
-      z-index: 150;
-      animation: flashAnim 0.15s forwards;
-    }
-    @keyframes flashAnim {
-      0% { opacity: 1; }
-      100% { opacity: 0; }
-    }
-    .ko-text {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 80px;
-      font-weight: 900;
-      color: #ff4757;
-      text-shadow: 0 0 30px rgba(255,71,87,0.8), 4px 4px 0 #000;
-      z-index: 180;
-      animation: koPop 1s forwards;
-      letter-spacing: 8px;
-    }
-    @keyframes koPop {
-      0% { transform: translate(-50%, -50%) scale(0) rotate(-10deg); opacity: 0; }
-      30% { transform: translate(-50%, -50%) scale(1.3) rotate(5deg); opacity: 1; }
-      60% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
-      100% { transform: translate(-50%, -50%) scale(0.8) rotate(0deg); opacity: 0; }
-    }
-    .wave-banner {
-      position: fixed;
-      top: 40%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 36px;
-      font-weight: 900;
-      color: #ffd93d;
-      text-shadow: 2px 2px 0 #000;
-      z-index: 180;
-      animation: waveIn 1.5s forwards;
-      letter-spacing: 4px;
-    }
-    @keyframes waveIn {
-      0% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
-      20% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-      80% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-      100% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    /* 敌人头像 */
+    #enemyImg {
+      width: 90px;
+      height: 90px;
+      object-fit: cover;
+      border-radius: 8px;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.6));
     }
   </style>
 </head>
@@ -282,40 +388,42 @@
     <div class="floor"></div>
 
     <!-- 玩家 -->
-    <div id="player" class="fighter" style="left:80px;">
+    <div id="player" class="fighter" style="left:70px;">
       <div class="name">你</div>
-      <div class="hp-bar"><div class="hp-fill" id="playerHp" style="width:100%"></div></div>
-      <div class="sprite">😤</div>
+      <div class="hp-bar"><div class="hp-fill player" id="playerHp" style="width:100%"></div></div>
+      <div class="sprite" id="playerSprite">👊</div>
     </div>
 
     <!-- 强强 -->
-    <div id="enemy" class="fighter" style="left:260px;">
-      <div class="name">强强</div>
+    <div id="enemy" class="fighter" style="left:240px;">
+      <div class="name" id="enemyName">强强</div>
       <div class="hp-bar"><div class="hp-fill enemy" id="enemyHp" style="width:100%"></div></div>
-      <div class="sprite" id="enemySprite">😈</div>
+      <img id="enemyImg" src="data:image/png;base64,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
+      style="left:240px;" crossorigin="anonymous">
     </div>
   </div>
 
   <div id="ui">
     <div id="wave-info">第 1 波</div>
     <div id="combo"></div>
+    <div id="score-display">0分</div>
   </div>
 
   <div id="controls">
     <div class="move-btns">
       <button class="ctrl-btn" ontouchstart="moveLeft()" onmousedown="moveLeft()" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchend="stopMove()">◀</button>
+      <button class="ctrl-btn" ontouchstart="jump()" onmousedown="jump()">⬆</button>
       <button class="ctrl-btn" ontouchstart="moveRight()" onmousedown="moveRight()" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchend="stopMove()">▶</button>
     </div>
     <div class="ctrl-group">
       <button class="ctrl-btn attack" ontouchstart="attack()" onmousedown="attack()">👊</button>
       <button class="ctrl-btn special" ontouchstart="special()" onmousedown="special()">💥</button>
-      <button class="ctrl-btn" ontouchstart="jump()" onmousedown="jump()">⬆</button>
     </div>
   </div>
 
   <div id="startScreen" class="screen">
     <h1>痛扁强强</h1>
-    <p class="desc">痛扁小朋友风格的对战游戏！<br>用连击打倒强强！</p>
+    <p class="desc">痛扁小朋友风格！<br>用连击打倒强强！<br>◀▶移动 &nbsp;⬆跳跃&nbsp;👊攻击&nbsp;💥大招</p>
     <button class="btn" onclick="startGame()">开始战斗</button>
   </div>
 
@@ -334,36 +442,41 @@
     const enemyHpEl = document.getElementById('enemyHp');
     const waveInfoEl = document.getElementById('wave-info');
     const comboEl = document.getElementById('combo');
+    const scoreEl = document.getElementById('score-display');
     const startScreen = document.getElementById('startScreen');
     const endScreen = document.getElementById('endScreen');
     const endTitle = document.getElementById('endTitle');
     const endResult = document.getElementById('endResult');
     const finalScoreEl = document.getElementById('finalScore');
-    const enemySpriteEl = document.getElementById('enemySprite');
+    const enemyNameEl = document.getElementById('enemyName');
+    const playerSprite = document.getElementById('playerSprite');
 
-    let playerX = 80, enemyX = 260;
+    let playerX = 70, enemyX = 240;
     let playerHP = 100, enemyHP = 100;
     let wave = 1, score = 0, combo = 0, comboTimer = null;
-    let gameActive = false, enemyAttacking = false;
-    let moveDir = 0, moving = false;
+    let gameActive = false, canAttack = true;
+    let moving = false, moveDir = 0;
+    let playerJumping = false;
 
-    const FACES = ['😈', '🤬', '👹', '💀', '👿'];
     const ENEMY_NAMES = ['小强强', '中强强', '强强王', 'BOSS强强'];
 
     function startGame() {
       playerHP = 100; enemyHP = 100; wave = 1; score = 0; combo = 0;
-      playerX = 80; enemyX = 260;
+      playerX = 70; enemyX = 240;
+      canAttack = true;
       updateHP();
       playerEl.style.left = playerX + 'px';
       enemyEl.style.left = enemyX + 'px';
-      enemySpriteEl.textContent = '😈';
-      enemyEl.querySelector('.name').textContent = '小强强';
+      enemyNameEl.textContent = '小强强';
+      enemyNameEl.className = 'name';
       enemyHpEl.className = 'hp-fill enemy';
+      enemyEl.className = 'fighter';
+      playerEl.className = 'fighter';
       startScreen.classList.add('hidden');
       endScreen.classList.add('hidden');
       gameActive = true;
       showWave();
-      setTimeout(() => enemyAI(), 2000);
+      setTimeout(() => enemyAI(), 2500);
     }
 
     function showWave() {
@@ -371,7 +484,7 @@
       b.className = 'wave-banner';
       b.textContent = wave === 4 ? 'BOSS战!' : `第 ${wave} 波`;
       game.appendChild(b);
-      setTimeout(() => b.remove(), 1500);
+      setTimeout(() => b.remove(), 2000);
       waveInfoEl.textContent = wave === 4 ? 'BOSS战!' : `第 ${wave} 波`;
     }
 
@@ -383,9 +496,10 @@
     function moveLeft() {
       if (!gameActive) return;
       moveDir = -1; moving = true;
+      playerSprite.textContent = '👈';
       const loop = () => {
-        if (!moving) return;
-        playerX = Math.max(10, playerX - 6);
+        if (!moving || !gameActive) return;
+        playerX = Math.max(10, playerX - 5);
         playerEl.style.left = playerX + 'px';
         requestAnimationFrame(loop);
       };
@@ -394,74 +508,112 @@
     function moveRight() {
       if (!gameActive) return;
       moveDir = 1; moving = true;
+      playerSprite.textContent = '👉';
       const loop = () => {
-        if (!moving) return;
-        playerX = Math.min(window.innerWidth - 80, playerX + 6);
+        if (!moving || !gameActive) return;
+        playerX = Math.min(window.innerWidth - 90, playerX + 5);
         playerEl.style.left = playerX + 'px';
         requestAnimationFrame(loop);
       };
       requestAnimationFrame(loop);
     }
-    function stopMove() { moving = false; }
+    function stopMove() {
+      moving = false;
+      playerSprite.textContent = '👊';
+    }
 
     function jump() {
-      if (!gameActive) return;
-      playerEl.style.transition = 'bottom 0.15s ease-out';
-      playerEl.style.bottom = (84 + 60) + 'px';
+      if (!gameActive || playerJumping) return;
+      playerJumping = true;
+      playerEl.style.bottom = (74 + 70) + 'px';
       setTimeout(() => {
-        playerEl.style.transition = 'bottom 0.15s ease-in';
-        playerEl.style.bottom = '84px';
-      }, 200);
+        playerEl.style.bottom = '74px';
+        playerJumping = false;
+      }, 300);
     }
 
     function isInRange() {
-      return Math.abs(playerX - enemyX) < 160;
+      return Math.abs(playerX - enemyX) < 170;
     }
 
     function attack() {
-      if (!gameActive) return;
+      if (!gameActive || !canAttack) return;
       if (!isInRange()) return;
+
+      canAttack = false;
+      setTimeout(() => canAttack = true, 300);
 
       combo++;
       clearTimeout(comboTimer);
-      comboTimer = setTimeout(() => { combo = 0; comboEl.classList.remove('show'); }, 1200);
+      comboTimer = setTimeout(() => { combo = 0; comboEl.classList.remove('show'); }, 1500);
 
-      let dmg = 8 + Math.floor(Math.random() * 6);
-      if (combo >= 3) { dmg *= 1.5; comboEl.classList.add('show'); comboEl.textContent = combo + ' 连击!'; }
-      if (combo >= 6) { dmg *= 1.8; }
+      // 前摇
+      playerEl.classList.add('attack-windup');
+      setTimeout(() => {
+        playerEl.classList.remove('attack-windup');
+        playerEl.classList.add('attacking');
 
-      dmg = Math.floor(dmg);
-      enemyHP -= dmg;
-      score += dmg;
-      updateHP();
-      spawnHit('👊', enemyX + 40, window.innerHeight - 160);
-      spawnDmg('-' + dmg, enemyX + 50, window.innerHeight - 180);
+        let dmg = 10 + Math.floor(Math.random() * 8);
+        if (combo >= 3) { dmg = Math.floor(dmg * 1.5); comboEl.classList.add('show'); comboEl.textContent = combo + ' 连击!'; }
+        if (combo >= 6) { dmg = Math.floor(dmg * 1.8); }
+        if (combo >= 10) { dmg = Math.floor(dmg * 2.2); }
 
-      enemyEl.style.transform = 'translateX(15px)';
-      setTimeout(() => enemyEl.style.transform = '', 100);
+        enemyHP -= dmg;
+        score += dmg;
+        updateHP();
+        scoreEl.textContent = score + '分';
 
-      if (enemyHP <= 0) nextWave();
+        spawnHit('👊', enemyX + 45, window.innerHeight - 170);
+        spawnDmg('-' + dmg, enemyX + 55, window.innerHeight - 190, dmg >= 25);
+
+        enemyEl.classList.add('hurt');
+        setTimeout(() => enemyEl.classList.remove('hurt'), 200);
+
+        const knockback = dmg > 20 ? 25 : 12;
+        enemyX = Math.min(window.innerWidth - 90, enemyX + knockback);
+        enemyEl.style.left = enemyX + 'px';
+        setTimeout(() => enemyEl.classList.remove('attacking'), 200);
+
+        if (dmg >= 30) spawnStars(enemyX + 45, window.innerHeight - 180);
+        if (enemyHP <= 0) nextWave();
+      }, 150);
     }
 
     function special() {
-      if (!gameActive) return;
+      if (!gameActive || !canAttack) return;
       if (!isInRange()) return;
 
-      let dmg = 25 + Math.floor(Math.random() * 15);
-      if (combo >= 3) { dmg *= 1.5; }
-      dmg = Math.floor(dmg);
-      enemyHP -= dmg;
-      score += dmg;
-      updateHP();
+      canAttack = false;
+      setTimeout(() => canAttack = true, 600);
 
-      spawnHit('💥', enemyX + 40, window.innerHeight - 160);
-      spawnDmg('-' + dmg, enemyX + 50, window.innerHeight - 180);
-      flashScreen();
+      let dmg = 30 + Math.floor(Math.random() * 20);
+      if (combo >= 5) dmg = Math.floor(dmg * 1.5);
 
-      enemyEl.style.transform = 'translateX(30px)';
-      setTimeout(() => enemyEl.style.transform = '', 200);
+      playerEl.classList.add('attack-windup');
+      setTimeout(() => {
+        playerEl.classList.remove('attack-windup');
+        playerEl.classList.add('attacking');
+        flashScreen();
 
-      if (enemyHP <= 0) nextWave();
+        enemyHP -= dmg;
+        score += dmg;
+        updateHP();
+        scoreEl.textContent = score + '分';
+
+        spawnHit('💥', enemyX + 45, window.innerHeight - 170);
+        spawnDmg('-' + dmg, enemyX + 55, window.innerHeight - 190, true);
+
+        enemyEl.classList.add('hurt', 'launched');
+        setTimeout(() => { enemyEl.classList.remove('hurt', 'launched'); }, 400);
+
+        enemyX = Math.min(window.innerWidth - 90, enemyX + 40);
+        enemyEl.style.left = enemyX + 'px';
+        setTimeout(() => enemyEl.classList.remove('attacking'), 250);
+
+        spawnStars(enemyX + 45, window.innerHeight - 180);
+        spawnStars(enemyX + 60, window.innerHeight - 160);
+        if (enemyHP <= 0) nextWave();
+      }, 100);
     }
 
     function spawnHit(emoji, x, y) {
@@ -471,24 +623,36 @@
       el.style.left = x + 'px';
       el.style.top = y + 'px';
       game.appendChild(el);
-      setTimeout(() => el.remove(), 500);
+      setTimeout(() => el.remove(), 400);
     }
 
-    function spawnDmg(text, x, y) {
+    function spawnDmg(text, x, y, big) {
       const el = document.createElement('div');
-      el.className = 'damage-num';
+      el.className = 'damage-num' + (big ? ' big' : '');
       el.textContent = text;
       el.style.left = x + 'px';
       el.style.top = y + 'px';
       game.appendChild(el);
-      setTimeout(() => el.remove(), 600);
+      setTimeout(() => el.remove(), 700);
+    }
+
+    function spawnStars(x, y) {
+      for (let i = 0; i < 3; i++) {
+        const el = document.createElement('div');
+        el.className = 'star-effect';
+        el.textContent = '⭐';
+        el.style.left = (x + (Math.random() - 0.5) * 60) + 'px';
+        el.style.top = (y + (Math.random() - 0.5) * 40) + 'px';
+        game.appendChild(el);
+        setTimeout(() => el.remove(), 500);
+      }
     }
 
     function flashScreen() {
       const el = document.createElement('div');
       el.className = 'flash';
       document.body.appendChild(el);
-      setTimeout(() => el.remove(), 150);
+      setTimeout(() => el.remove(), 120);
     }
 
     function nextWave() {
@@ -500,59 +664,70 @@
       ko.className = 'ko-text';
       ko.textContent = 'K.O.';
       document.body.appendChild(ko);
-      setTimeout(() => ko.remove(), 1000);
+      setTimeout(() => ko.remove(), 1200);
 
       setTimeout(() => {
-        if (wave >= 4) {
-          endGame(true);
-          return;
-        }
+        if (wave >= 4) { endGame(true); return; }
         wave++;
         enemyHP = 100;
-        enemyX = 260;
+        enemyX = 240;
         updateHP();
         enemyEl.style.left = enemyX + 'px';
-        enemySpriteEl.textContent = FACES[wave - 1] || '💀';
-        enemyEl.querySelector('.name').textContent = ENEMY_NAMES[wave - 1] || '强强';
-        if (wave === 4) enemyHpEl.className = 'hp-fill boss';
+        enemyNameEl.textContent = ENEMY_NAMES[wave - 1];
+        if (wave === 4) { enemyNameEl.className = 'name boss'; enemyHpEl.className = 'hp-fill boss'; }
+        else if (wave === 3) { enemyNameEl.className = 'name boss'; }
 
         gameActive = true;
         showWave();
-        setTimeout(() => enemyAI(), 2000);
+        setTimeout(() => enemyAI(), 2500);
       }, 1500);
     }
 
     function enemyAI() {
-      if (!gameActive || enemyHP <= 0) return;
+      if (!gameActive || enemyHP <= 0 || playerHP <= 0) return;
 
       const action = Math.random();
-      if (action < 0.4 && !enemyAttacking) {
+
+      if (action < 0.45) {
         // 攻击玩家
-        enemyAttacking = true;
-        let dmg = 5 + wave * 3 + Math.floor(Math.random() * 5);
-        if (wave === 4) dmg = Math.floor(dmg * 1.5);
+        let dmg = 6 + wave * 4 + Math.floor(Math.random() * 6);
+        if (wave === 4) dmg = Math.floor(dmg * 1.4);
+        if (wave === 3) dmg = Math.floor(dmg * 1.2);
 
-        setTimeout(() => {
-          if (!gameActive) { enemyAttacking = false; return; }
-          playerHP -= Math.floor(dmg);
-          updateHP();
-          spawnHit('👊', playerX + 40, window.innerHeight - 160);
-          spawnDmg('-' + Math.floor(dmg), playerX + 50, window.innerHeight - 180);
-          playerEl.style.transform = 'translateX(-10px)';
-          setTimeout(() => playerEl.style.transform = '', 100);
-          enemyAttacking = false;
+        playerHP -= dmg;
+        updateHP();
+        spawnHit('👊', playerX + 45, window.innerHeight - 170);
+        spawnDmg('-' + dmg, playerX + 55, window.innerHeight - 190, false);
 
-          if (playerHP <= 0) endGame(false);
-          else setTimeout(() => enemyAI(), 800 + Math.random() * 1000);
-        }, 500);
-      } else if (action < 0.7) {
-        // 移动
+        playerEl.classList.add('hurt');
+        setTimeout(() => playerEl.classList.remove('hurt'), 200);
+
+        const knockback = dmg > 15 ? -20 : -10;
+        playerX = Math.max(10, playerX + knockback);
+        playerEl.style.left = playerX + 'px';
+
+        if (playerHP <= 0) { endGame(false); return; }
+        setTimeout(() => enemyAI(), 1000 + Math.random() * 800);
+
+      } else if (action < 0.75) {
+        // 追击玩家
         const dir = playerX < enemyX ? -1 : 1;
-        enemyX = Math.max(160, Math.min(window.innerWidth - 80, enemyX + dir * 80));
+        const dist = Math.abs(playerX - enemyX);
+        const moveAmount = dist > 100 ? 60 : 30;
+        enemyX = Math.max(160, Math.min(window.innerWidth - 90, enemyX + dir * moveAmount));
         enemyEl.style.left = enemyX + 'px';
-        setTimeout(() => enemyAI(), 600);
+        setTimeout(() => enemyAI(), 700 + Math.random() * 500);
+
+      } else if (action < 0.88) {
+        // 后撤
+        const dir = playerX < enemyX ? 1 : -1;
+        enemyX = Math.max(160, Math.min(window.innerWidth - 90, enemyX + dir * 40));
+        enemyEl.style.left = enemyX + 'px';
+        setTimeout(() => enemyAI(), 600 + Math.random() * 600);
+
       } else {
-        setTimeout(() => enemyAI(), 600 + Math.random() * 800);
+        // 原地待机后再次行动
+        setTimeout(() => enemyAI(), 500 + Math.random() * 700);
       }
     }
 
@@ -561,11 +736,15 @@
       if (win) {
         score += 2000;
         endTitle.textContent = '胜利!';
+        endTitle.style.webkitTextFillColor = '#4ade80';
         endResult.textContent = '你痛扁了强强!';
+        endResult.className = 'result-text win-text';
         finalScoreEl.textContent = score;
       } else {
         endTitle.textContent = 'K.O.';
+        endTitle.style.webkitTextFillColor = '#ff4757';
         endResult.textContent = '强强把你打趴了...';
+        endResult.className = 'result-text lose-text';
         finalScoreEl.textContent = score;
       }
       endScreen.classList.remove('hidden');
