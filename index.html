@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>痛扁强强</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      overflow: hidden;
+      touch-action: none;
+      font-family: system-ui, -apple-system, sans-serif;
+      user-select: none;
+    }
+    #game {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+    #bg {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, #16213e 0%, #1a1a2e 60%, #2d2d44 100%);
+    }
+    .floor {
+      position: absolute;
+      bottom: 80px;
+      left: 0; right: 0;
+      height: 4px;
+      background: #4a4a6a;
+    }
+    .floor::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 80px;
+      background: linear-gradient(180deg, #2d2d44 0%, #1a1a2e 100%);
+    }
+
+    /* 角色 */
+    .fighter {
+      position: absolute;
+      bottom: 84px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: left 0.05s;
+    }
+    .sprite {
+      font-size: 64px;
+      line-height: 1;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+    }
+    .hp-bar {
+      width: 80px;
+      height: 10px;
+      background: #333;
+      border-radius: 5px;
+      margin-bottom: 4px;
+      overflow: hidden;
+    }
+    .hp-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff4757, #ff6b81);
+      transition: width 0.2s;
+      border-radius: 5px;
+    }
+    .hp-fill.enemy {
+      background: linear-gradient(90deg, #ff4757, #ff6b81);
+    }
+    .hp-fill.boss {
+      background: linear-gradient(90deg, #a855f7, #ec4899);
+      width: 100%;
+    }
+    .name {
+      font-size: 12px;
+      color: #fff;
+      text-align: center;
+      margin-bottom: 2px;
+      text-shadow: 1px 1px 2px #000;
+    }
+    .hit-effect {
+      position: absolute;
+      font-size: 32px;
+      font-weight: bold;
+      color: #ffd93d;
+      pointer-events: none;
+      animation: hitPop 0.5s forwards;
+    }
+    @keyframes hitPop {
+      0% { transform: scale(0.5) translateY(0); opacity: 1; }
+      50% { transform: scale(1.2) translateY(-20px); opacity: 1; }
+      100% { transform: scale(1) translateY(-40px); opacity: 0; }
+    }
+    .damage-num {
+      position: absolute;
+      font-size: 28px;
+      font-weight: 700;
+      color: #ff4757;
+      pointer-events: none;
+      animation: damageFly 0.6s forwards;
+    }
+    @keyframes damageFly {
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(-60px) scale(0.6); opacity: 0; }
+    }
+
+    /* 控制按钮 */
+    #controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      padding: 16px;
+      background: linear-gradient(180deg, transparent, rgba(0,0,0,0.6));
+      z-index: 100;
+    }
+    .ctrl-group {
+      display: flex;
+      gap: 8px;
+    }
+    .ctrl-btn {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      font-size: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      backdrop-filter: blur(4px);
+    }
+    .ctrl-btn:active {
+      background: rgba(255,255,255,0.3);
+      transform: scale(0.9);
+    }
+    .ctrl-btn.attack {
+      background: rgba(255,71,87,0.3);
+      border-color: #ff4757;
+    }
+    .ctrl-btn.special {
+      background: rgba(168,85,247,0.3);
+      border-color: #a855f7;
+    }
+    .move-btns {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* 状态栏 */
+    #ui {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #fff;
+      z-index: 100;
+      pointer-events: none;
+    }
+    #wave-info {
+      font-size: 16px;
+      color: #ffd93d;
+      font-weight: 600;
+    }
+    #combo {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ff4757;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    #combo.show { opacity: 1; }
+
+    /* 开始/结束界面 */
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(26,26,46,0.97);
+      z-index: 200;
+      color: #fff;
+      gap: 16px;
+    }
+    .screen.hidden { display: none; }
+    h1 {
+      font-size: 48px;
+      letter-spacing: 6px;
+      background: linear-gradient(135deg, #ff4757, #ffd93d);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .final-score {
+      font-size: 64px;
+      font-weight: 700;
+      color: #ffd93d;
+    }
+    .btn {
+      padding: 16px 48px;
+      font-size: 20px;
+      font-weight: 700;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #ff4757, #ff8e53);
+      color: #fff;
+      margin-top: 8px;
+    }
+    .btn:active { transform: scale(0.95); }
+    .desc { color: #888; font-size: 14px; text-align: center; max-width: 280px; }
+    .result-text { font-size: 24px; color: #aaa; }
+
+    /* 特效 */
+    .flash {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,71,87,0.2);
+      pointer-events: none;
+      z-index: 150;
+      animation: flashAnim 0.15s forwards;
+    }
+    @keyframes flashAnim {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    .ko-text {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 80px;
+      font-weight: 900;
+      color: #ff4757;
+      text-shadow: 0 0 30px rgba(255,71,87,0.8), 4px 4px 0 #000;
+      z-index: 180;
+      animation: koPop 1s forwards;
+      letter-spacing: 8px;
+    }
+    @keyframes koPop {
+      0% { transform: translate(-50%, -50%) scale(0) rotate(-10deg); opacity: 0; }
+      30% { transform: translate(-50%, -50%) scale(1.3) rotate(5deg); opacity: 1; }
+      60% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(0.8) rotate(0deg); opacity: 0; }
+    }
+    .wave-banner {
+      position: fixed;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 36px;
+      font-weight: 900;
+      color: #ffd93d;
+      text-shadow: 2px 2px 0 #000;
+      z-index: 180;
+      animation: waveIn 1.5s forwards;
+      letter-spacing: 4px;
+    }
+    @keyframes waveIn {
+      0% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+      20% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      80% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div id="bg"></div>
+    <div class="floor"></div>
+
+    <!-- 玩家 -->
+    <div id="player" class="fighter" style="left:80px;">
+      <div class="name">你</div>
+      <div class="hp-bar"><div class="hp-fill" id="playerHp" style="width:100%"></div></div>
+      <div class="sprite">😤</div>
+    </div>
+
+    <!-- 强强 -->
+    <div id="enemy" class="fighter" style="left:260px;">
+      <div class="name">强强</div>
+      <div class="hp-bar"><div class="hp-fill enemy" id="enemyHp" style="width:100%"></div></div>
+      <div class="sprite" id="enemySprite">😈</div>
+    </div>
+  </div>
+
+  <div id="ui">
+    <div id="wave-info">第 1 波</div>
+    <div id="combo"></div>
+  </div>
+
+  <div id="controls">
+    <div class="move-btns">
+      <button class="ctrl-btn" ontouchstart="moveLeft()" onmousedown="moveLeft()" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchend="stopMove()">◀</button>
+      <button class="ctrl-btn" ontouchstart="moveRight()" onmousedown="moveRight()" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchend="stopMove()">▶</button>
+    </div>
+    <div class="ctrl-group">
+      <button class="ctrl-btn attack" ontouchstart="attack()" onmousedown="attack()">👊</button>
+      <button class="ctrl-btn special" ontouchstart="special()" onmousedown="special()">💥</button>
+      <button class="ctrl-btn" ontouchstart="jump()" onmousedown="jump()">⬆</button>
+    </div>
+  </div>
+
+  <div id="startScreen" class="screen">
+    <h1>痛扁强强</h1>
+    <p class="desc">痛扁小朋友风格的对战游戏！<br>用连击打倒强强！</p>
+    <button class="btn" onclick="startGame()">开始战斗</button>
+  </div>
+
+  <div id="endScreen" class="screen hidden">
+    <h1 id="endTitle">K.O.</h1>
+    <p id="endResult" class="result-text"></p>
+    <div id="finalScore" class="final-score">0</div>
+    <button class="btn" onclick="startGame()">再来一次</button>
+  </div>
+
+  <script>
+    const game = document.getElementById('game');
+    const playerEl = document.getElementById('player');
+    const enemyEl = document.getElementById('enemy');
+    const playerHpEl = document.getElementById('playerHp');
+    const enemyHpEl = document.getElementById('enemyHp');
+    const waveInfoEl = document.getElementById('wave-info');
+    const comboEl = document.getElementById('combo');
+    const startScreen = document.getElementById('startScreen');
+    const endScreen = document.getElementById('endScreen');
+    const endTitle = document.getElementById('endTitle');
+    const endResult = document.getElementById('endResult');
+    const finalScoreEl = document.getElementById('finalScore');
+    const enemySpriteEl = document.getElementById('enemySprite');
+
+    let playerX = 80, enemyX = 260;
+    let playerHP = 100, enemyHP = 100;
+    let wave = 1, score = 0, combo = 0, comboTimer = null;
+    let gameActive = false, enemyAttacking = false;
+    let moveDir = 0, moving = false;
+
+    const FACES = ['😈', '🤬', '👹', '💀', '👿'];
+    const ENEMY_NAMES = ['小强强', '中强强', '强强王', 'BOSS强强'];
+
+    function startGame() {
+      playerHP = 100; enemyHP = 100; wave = 1; score = 0; combo = 0;
+      playerX = 80; enemyX = 260;
+      updateHP();
+      playerEl.style.left = playerX + 'px';
+      enemyEl.style.left = enemyX + 'px';
+      enemySpriteEl.textContent = '😈';
+      enemyEl.querySelector('.name').textContent = '小强强';
+      enemyHpEl.className = 'hp-fill enemy';
+      startScreen.classList.add('hidden');
+      endScreen.classList.add('hidden');
+      gameActive = true;
+      showWave();
+      setTimeout(() => enemyAI(), 2000);
+    }
+
+    function showWave() {
+      const b = document.createElement('div');
+      b.className = 'wave-banner';
+      b.textContent = wave === 4 ? 'BOSS战!' : `第 ${wave} 波`;
+      game.appendChild(b);
+      setTimeout(() => b.remove(), 1500);
+      waveInfoEl.textContent = wave === 4 ? 'BOSS战!' : `第 ${wave} 波`;
+    }
+
+    function updateHP() {
+      playerHpEl.style.width = Math.max(0, playerHP) + '%';
+      enemyHpEl.style.width = Math.max(0, enemyHP) + '%';
+    }
+
+    function moveLeft() {
+      if (!gameActive) return;
+      moveDir = -1; moving = true;
+      const loop = () => {
+        if (!moving) return;
+        playerX = Math.max(10, playerX - 6);
+        playerEl.style.left = playerX + 'px';
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    }
+    function moveRight() {
+      if (!gameActive) return;
+      moveDir = 1; moving = true;
+      const loop = () => {
+        if (!moving) return;
+        playerX = Math.min(window.innerWidth - 80, playerX + 6);
+        playerEl.style.left = playerX + 'px';
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    }
+    function stopMove() { moving = false; }
+
+    function jump() {
+      if (!gameActive) return;
+      playerEl.style.transition = 'bottom 0.15s ease-out';
+      playerEl.style.bottom = (84 + 60) + 'px';
+      setTimeout(() => {
+        playerEl.style.transition = 'bottom 0.15s ease-in';
+        playerEl.style.bottom = '84px';
+      }, 200);
+    }
+
+    function isInRange() {
+      return Math.abs(playerX - enemyX) < 160;
+    }
+
+    function attack() {
+      if (!gameActive) return;
+      if (!isInRange()) return;
+
+      combo++;
+      clearTimeout(comboTimer);
+      comboTimer = setTimeout(() => { combo = 0; comboEl.classList.remove('show'); }, 1200);
+
+      let dmg = 8 + Math.floor(Math.random() * 6);
+      if (combo >= 3) { dmg *= 1.5; comboEl.classList.add('show'); comboEl.textContent = combo + ' 连击!'; }
+      if (combo >= 6) { dmg *= 1.8; }
+
+      dmg = Math.floor(dmg);
+      enemyHP -= dmg;
+      score += dmg;
+      updateHP();
+      spawnHit('👊', enemyX + 40, window.innerHeight - 160);
+      spawnDmg('-' + dmg, enemyX + 50, window.innerHeight - 180);
+
+      enemyEl.style.transform = 'translateX(15px)';
+      setTimeout(() => enemyEl.style.transform = '', 100);
+
+      if (enemyHP <= 0) nextWave();
+    }
+
+    function special() {
+      if (!gameActive) return;
+      if (!isInRange()) return;
+
+      let dmg = 25 + Math.floor(Math.random() * 15);
+      if (combo >= 3) { dmg *= 1.5; }
+      dmg = Math.floor(dmg);
+      enemyHP -= dmg;
+      score += dmg;
+      updateHP();
+
+      spawnHit('💥', enemyX + 40, window.innerHeight - 160);
+      spawnDmg('-' + dmg, enemyX + 50, window.innerHeight - 180);
+      flashScreen();
+
+      enemyEl.style.transform = 'translateX(30px)';
+      setTimeout(() => enemyEl.style.transform = '', 200);
+
+      if (enemyHP <= 0) nextWave();
+    }
+
+    function spawnHit(emoji, x, y) {
+      const el = document.createElement('div');
+      el.className = 'hit-effect';
+      el.textContent = emoji;
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      game.appendChild(el);
+      setTimeout(() => el.remove(), 500);
+    }
+
+    function spawnDmg(text, x, y) {
+      const el = document.createElement('div');
+      el.className = 'damage-num';
+      el.textContent = text;
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      game.appendChild(el);
+      setTimeout(() => el.remove(), 600);
+    }
+
+    function flashScreen() {
+      const el = document.createElement('div');
+      el.className = 'flash';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 150);
+    }
+
+    function nextWave() {
+      gameActive = false;
+      score += 500;
+      combo = 0; comboEl.classList.remove('show');
+
+      const ko = document.createElement('div');
+      ko.className = 'ko-text';
+      ko.textContent = 'K.O.';
+      document.body.appendChild(ko);
+      setTimeout(() => ko.remove(), 1000);
+
+      setTimeout(() => {
+        if (wave >= 4) {
+          endGame(true);
+          return;
+        }
+        wave++;
+        enemyHP = 100;
+        enemyX = 260;
+        updateHP();
+        enemyEl.style.left = enemyX + 'px';
+        enemySpriteEl.textContent = FACES[wave - 1] || '💀';
+        enemyEl.querySelector('.name').textContent = ENEMY_NAMES[wave - 1] || '强强';
+        if (wave === 4) enemyHpEl.className = 'hp-fill boss';
+
+        gameActive = true;
+        showWave();
+        setTimeout(() => enemyAI(), 2000);
+      }, 1500);
+    }
+
+    function enemyAI() {
+      if (!gameActive || enemyHP <= 0) return;
+
+      const action = Math.random();
+      if (action < 0.4 && !enemyAttacking) {
+        // 攻击玩家
+        enemyAttacking = true;
+        let dmg = 5 + wave * 3 + Math.floor(Math.random() * 5);
+        if (wave === 4) dmg = Math.floor(dmg * 1.5);
+
+        setTimeout(() => {
+          if (!gameActive) { enemyAttacking = false; return; }
+          playerHP -= Math.floor(dmg);
+          updateHP();
+          spawnHit('👊', playerX + 40, window.innerHeight - 160);
+          spawnDmg('-' + Math.floor(dmg), playerX + 50, window.innerHeight - 180);
+          playerEl.style.transform = 'translateX(-10px)';
+          setTimeout(() => playerEl.style.transform = '', 100);
+          enemyAttacking = false;
+
+          if (playerHP <= 0) endGame(false);
+          else setTimeout(() => enemyAI(), 800 + Math.random() * 1000);
+        }, 500);
+      } else if (action < 0.7) {
+        // 移动
+        const dir = playerX < enemyX ? -1 : 1;
+        enemyX = Math.max(160, Math.min(window.innerWidth - 80, enemyX + dir * 80));
+        enemyEl.style.left = enemyX + 'px';
+        setTimeout(() => enemyAI(), 600);
+      } else {
+        setTimeout(() => enemyAI(), 600 + Math.random() * 800);
+      }
+    }
+
+    function endGame(win) {
+      gameActive = false;
+      if (win) {
+        score += 2000;
+        endTitle.textContent = '胜利!';
+        endResult.textContent = '你痛扁了强强!';
+        finalScoreEl.textContent = score;
+      } else {
+        endTitle.textContent = 'K.O.';
+        endResult.textContent = '强强把你打趴了...';
+        finalScoreEl.textContent = score;
+      }
+      endScreen.classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
